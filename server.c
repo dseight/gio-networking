@@ -13,28 +13,6 @@ typedef struct {
 static GArray *connection_descriptions;
 
 
-/* Get port description of specified socket */
-static ConnectionDescription *get_port_description(GSocket *socket)
-{
-    /* Port descriptions must be initialized before call */
-    g_assert(connection_descriptions != NULL);
-
-    GSocketAddress *socket_address = g_socket_get_local_address(socket, NULL);
-    guint16 port = g_inet_socket_address_get_port(G_INET_SOCKET_ADDRESS(socket_address));
-
-    for (unsigned int i = 0; i < connection_descriptions->len; ++i) {
-        ConnectionDescription *cd;
-
-        cd = &g_array_index(connection_descriptions, ConnectionDescription, i);
-
-        if (cd->port == port) {
-            return cd;
-        }
-    }
-
-    return NULL;
-}
-
 static gboolean on_socket_event(GSocket *socket, GIOCondition condition,
     gpointer user_data)
 {
@@ -59,7 +37,21 @@ static gboolean accept_connection(GSocketService *service,
     GSocketConnection *connection, GObject *source_object, gpointer user_data)
 {
     GSocket *socket = g_socket_connection_get_socket(connection);
-    ConnectionDescription *cd = get_port_description(socket);
+
+    /* Now search for connection description for specific socket */
+    GSocketAddress *socket_address = g_socket_get_local_address(socket, NULL);
+    guint16 port = g_inet_socket_address_get_port(G_INET_SOCKET_ADDRESS(socket_address));
+
+    ConnectionDescription *cd = NULL;
+    for (unsigned int i = 0; i < connection_descriptions->len; ++i) {
+        ConnectionDescription *cd_tmp;
+        cd_tmp = &g_array_index(connection_descriptions, ConnectionDescription, i);
+
+        if (cd_tmp->port == port) {
+            cd = cd_tmp;
+            break;
+        }
+    }
 
     /* cd will never be NULL just because accept_connection invoked only
      * on ports that previously added with add_listening_port() */
