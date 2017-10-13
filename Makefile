@@ -1,10 +1,14 @@
-obj-y += server.o
+server-objs += server.o
+client-objs += client.o
 
-all: server
+all: server client
 # Dummy command so that make thinks it has done something
 	@true
 
-server: $(obj-y)
+server: $(server-objs)
+	$(call LINK, $^)
+
+client: $(client-objs)
 	$(call LINK, $^)
 
 include rules.mak
