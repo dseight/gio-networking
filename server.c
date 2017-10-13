@@ -67,8 +67,8 @@ static gboolean accept_connection(GSocketService *service,
     return TRUE;
 }
 
-static void add_listening_port(GSocketService *service, guint16 port,
-    const char *name, GSocketSourceFunc handler)
+static gboolean add_listening_port(GSocketService *service, guint16 port,
+    const char *name, GSocketSourceFunc handler, GError **error)
 {
     if (connection_descriptions == NULL) {
         connection_descriptions = g_array_new(FALSE, FALSE, sizeof(ConnectionDescription));
@@ -80,15 +80,24 @@ static void add_listening_port(GSocketService *service, guint16 port,
         .handler = handler,
     }));
 
-    g_socket_listener_add_inet_port(G_SOCKET_LISTENER(service), port, NULL, NULL);
+    return g_socket_listener_add_inet_port(G_SOCKET_LISTENER(service),
+        port, NULL, error);
 }
 
 int main(void)
 {
+    GError *error = NULL;
     GSocketService *service = g_socket_service_new();
 
-    add_listening_port(service, 3701, "Service 1", on_socket_event);
-    add_listening_port(service, 3702, "Service 2", on_socket_event);
+    if (!add_listening_port(service, 3701, "Service 1", on_socket_event, &error)) {
+        g_print("%s\n", error->message);
+        return 1;
+    }
+
+    if (!add_listening_port(service, 3702, "Service 2", on_socket_event, &error)) {
+        g_print("%s\n", error->message);
+        return 1;
+    }
 
     /* Start listen for incoming connections */
     g_signal_connect(service, "incoming", G_CALLBACK(accept_connection), NULL);
